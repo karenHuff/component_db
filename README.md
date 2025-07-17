@@ -1,12 +1,71 @@
-# React + Vite
+# Integrar capacitor a tu proyecto de React
+```
+   npm install @capacitor/core @capacitor/cli
+   npx cap init
+```
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Agregar plugin para SQLite
+```
+   npm i @capacitor-community/sqlite
+   npm i @capacitor/preferences
+```
 
-Currently, two official plugins are available:
+## Configurar capacitor para android
+```
+   npm i @capacitor/android
+   npx cap add android
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Verificar que se esté utilizando JDK 21
+```
+   minSdkVersion = 23
+   compileSdkVersion = 35
+   targetSdkVersion = 35
+```
 
-## Expanding the ESLint configuration
+En la carpeta public del proyecto agregar la base de datos en: assets/databases/name_db.db
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Cofigurar proyecto para usar SQLite desde android
+```
+   import { Capacitor } from "@capacitor/core";
+   import { CapacitorSQLite, SQLiteConnection } from "@capacitor-community/sqlite";
+   import { Preferences } from '@capacitor/preferences';
+
+   async function initDB() {
+      try {
+         const sqlite = new SQLiteConnection(CapacitorSQLite);
+         const platform = Capacitor.getPlatform();
+         const NAME_DB = "name_db"; // Nombre de la base de datos
+         const VERSION_DB = "1"; // Versión de la base de datos
+
+         if (platform === 'android') {
+            const { value: versions } = await Preferences.get({ key: 'dbCopied' });
+
+            // Copiar base de datos desde assets solo una vez
+            if (versions !== VERSION_DB) {
+               await sqlite.copyFromAssets();
+               await Preferences.set({ key: 'dbCopied', value: VERSION_DB });
+               alert("Base de datos copiada desde assets.");
+            }
+
+            // Crear conexión a la base de datos
+            const db = await sqlite.createConnection(NAME_DB, false, 'no-encryption', 1);
+            await db.open();
+            
+            // Verificar que se haya establecido la conexión
+            if ((await db.isDBOpen()).result) {
+               alert('Conexión establecida.');
+            }
+         }
+      } catch (error) {
+         alert('Ocurrió un error.');
+      }
+   }
+```
+
+## Correr proyecto para modo desarrollo (debug)
+```
+   npm run build
+   npx cap sync
+   npx cap run android
+```
